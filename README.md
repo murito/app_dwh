@@ -24,6 +24,24 @@ Eso creará el nuevo entorno virtual e iniciará a trabajar dentro del mismo, es
 
 de `usuario$` a `(project_name)usuario$`
 
+# Configuraciones Iniciales
+
+Deben tener ya creada la base de datos, de otro modo habría que hacer las migraciones de los modelos creados en el código
+
+Es necesario configurar en `datawarehouse/settings.py` el acceso a la base de datos
+
+```DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'nombre_de_su_base_de_datos_local',
+        'USER': 'usuario_de_su_base_de_datos',
+        'PASSWORD': 'password_de_su_base_de_datos',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}```
+
+
 # Dependencias
 
 Necesitamos instalar las dependencias del projecto para eso usamos el  `pip`
