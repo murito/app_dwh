@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}home{% endblock title %}
+
+{% block content %}
+<div class="row">
+  <div class="col-xs-3">
+    <h3>Reportes de: {{ user.first_name}} {{ user.last_name }}</h3>
+
+    <div class="list-group">
+      {% for reporte in reportes%}
+      <a href="#" class="list-group-item">
+          <div class="float50">{{ reporte.nombre }}</div>
+          <div class="float50 text-right">
+            <i class="fa fa-cubes text-right" aria-hidden="true"></i>
+          </div>
+          <div class="clear"></div>
+      </a>
+      {%endfor%}
+    </div>
+  </div>
+</div>
+{% endblock content %}

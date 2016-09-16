@@ -1,0 +1,12 @@
+.alert.fixed{
+  position: fixed;
+  z-index: 1;
+  opacity: 0.8;
+}
+.float50{
+  float: left;
+  width: 50%;
+}
+.clear{
+  clear: both;
+}
