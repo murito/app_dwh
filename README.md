@@ -1,9 +1,6 @@
 # app_dwh
 Aplicación para gestión de reportes para datawarehouse
 
-# app_dwh
-Aplicación para gestión de reportes para datawarehouse
-
 # Software requerido
 bower https://bower.io/#install-bower
 
