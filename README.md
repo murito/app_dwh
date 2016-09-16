@@ -30,7 +30,8 @@ Deben tener ya creada la base de datos, de otro modo habría que hacer las migra
 
 Es necesario configurar en `datawarehouse/settings.py` el acceso a la base de datos
 
-```DATABASES = {
+```
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'nombre_de_su_base_de_datos_local',
@@ -39,7 +40,8 @@ Es necesario configurar en `datawarehouse/settings.py` el acceso a la base de da
         'HOST': 'localhost',
         'PORT': '3306',
     }
-}```
+}
+```
 
 
 # Dependencias
