@@ -18,7 +18,11 @@
       <div class="nav navbar-collapse">
         <ul class="nav navbar-nav">
             {% if user.is_authenticated %}
-            <button type="button" class="btn btn-primary navbar-btn">Agregar Reporte</button>
+              {% if request.path == '/reportes/nuevo/' %}
+              <button type="button" class="btn btn-primary navbar-btn disabled">Agregar Reporte</button>
+              {% else %}
+              <button type="button" class="btn btn-primary navbar-btn" onclick="window.location = '{% url 'reportes.nuevo' %}'">Agregar Reporte</button>
+              {% endif%}
             {% endif %}
         </ul>
         <ul class="nav navbar-nav navbar-right">

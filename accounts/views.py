@@ -49,6 +49,8 @@ def registro_usuario_view(request):
             # diccionario con pares clave/valor, donde clave es el nombre del campo
             # del formulario y el valor es el valor si existe.
             cleaned_data = form.cleaned_data
+            nombre = cleaned_data.get('nombre')
+            apellido = cleaned_data.get('apellido')
             username = cleaned_data.get('username')
             password = cleaned_data.get('password')
             email = cleaned_data.get('email')
@@ -57,6 +59,8 @@ def registro_usuario_view(request):
             user_model = User.objects.create_user(username=username, password=password)
             # Añadimos el email
             user_model.email = email
+            user_model.first_name = nombre
+            user_model.last_name = apellido
             # Y guardamos el objeto, esto guardara los datos en la db.
             user_model.save()
 

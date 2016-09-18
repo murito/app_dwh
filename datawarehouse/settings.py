@@ -24,6 +24,23 @@ SECRET_KEY = '^$ppd)*w0+(!hcr$5e#yr(b41%9s(v^mfnyk*n**#dpwzd&)jq'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'datawarehouse': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': True,
+        },
+    },
+}
 
 ALLOWED_HOSTS = []
 
