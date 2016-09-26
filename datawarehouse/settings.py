@@ -71,6 +71,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'datawarehouse.urls'
 
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -103,7 +107,10 @@ DATABASES = {
         'PORT': '3306',
     }
 }
-
+# Activamos esta opcion para poder hacer load data infile
+DATABASE_OPTIONS = {
+    'local_infile': 1,
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
