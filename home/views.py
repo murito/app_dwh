@@ -7,6 +7,8 @@ from django.contrib.auth.models import User
 
 from reportes.models import Reporte
 
+import MySQLdb
+
 @login_required
 def index_view(request):
     reportes = Reporte.objects.filter(user_id=request.user.id).select_related()
