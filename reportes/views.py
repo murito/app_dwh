@@ -14,13 +14,23 @@ import csv
 import ast
 import os
 import logging
+import re
+import numbers
+
+from messytables import CSVTableSet, type_guess, \
+types_processor, headers_guess, headers_processor, \
+offset_processor, any_tableset
 
 #Obtenemos una instancia de logger para poder loguear en la consola
 logger = logging.getLogger(__name__)
 
-
 separadores = [",","\\t"]
 findelineas = ["\\n","\\r", "\\r\\n"]
+
+
+# conectamos con la base de datos con permisos de cargar archivos
+db_ = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh', local_infile=1)
+
 
 # Almacemanos el archivo en lugar de tratarlo desde la memoria para evitar
 # problemas con archivos muy grandes
@@ -31,24 +41,45 @@ def almacena_archivo_desde_formulario(archivo, nombre):
         for chunk in archivo.chunks():
             destino.write(chunk)
 
-def crear_schema_tabla(nombre, separador, findelinea):
-    # abrimos el archivo con codificacion ISO
-    with open('media/temp/'+nombre, encoding="ISO-8859-1") as csvfile:
-        #Obtenemos liena 1 para tomar las cabeceras
-        linea = csvfile.readlines(1)
-        #Extraemos los campos quitando el salto de liena y el retorno de carro
-        # Las lineas seran divididas por comas
-        campos = tuple(linea[0].strip('\n').strip('\r').split(separadores[separador]))
 
+def crear_schema_tabla_v2(nombre):
+    fh = open('media/temp/'+nombre, 'rb')
 
+    # Cargamos el archivo y creamos el objeto
+    table_set = CSVTableSet(fh)
+
+    # Obtenemos la tabla cero
+    row_set = table_set.tables[0]
+
+    # Obtenemos los nombres de las columnas
+    offset, headers = headers_guess(row_set.sample)
+    row_set.register_processor(headers_processor(headers))
+
+    # Recorremos una fila abajo parra saltar la cabecera
+    row_set.register_processor(offset_processor(offset + 1))
+
+    # Obtenemos los tipos de datos de cada columna
+    types = type_guess(row_set.sample, strict=True)
+
+    # Aplicamos los tipos encontrados en cada fila del conjunto
+    row_set.register_processor(types_processor(types))
 
     # Preparamos la consulta quitandole al nombre del archivo la extension
     sql = "DROP TABLE IF EXISTS "+nombre[:-4]+"; "
     sql = "CREATE TABLE IF NOT EXISTS "+nombre[:-4]+"("
 
-    # Recorremos los campos para crear la tabla
-    for indice, campo in enumerate(campos):
-        sql += "`"+campo+"` TEXT, "
+    # solo recorremos el row 1
+    for row in row_set:
+        for field in row:
+            if str(field.type) == "Integer":
+                sql += "`"+field.column+"` INT(11), "
+            elif str(field.type) == "Decimal":
+                sql += "`"+field.column+"` DECIMAL(64,10), "
+            elif str(field.type) == "Bool":
+                sql += "`"+field.column+"` INT(1), "
+            else:
+                sql += "`"+field.column+"` VARCHAR("+str(len(field.value))+"), "
+        break
 
     sql = sql[:-2]+")"
 
@@ -77,18 +108,19 @@ def nuevo_reporte_view(request):
             nombre_archivo = reporte_model.nombre_tabla+'.'+request.FILES['archivo'].name[-3:]
             almacena_archivo_desde_formulario(request.FILES['archivo'], nombre_archivo)
 
-            # generamos el script para crear la tabla
-            sql = crear_schema_tabla(nombre_archivo, separador, findelinea)
 
-            # conectamos con la base de datos con permisos de cargar archivos
-            db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh', local_infile=1)
+            #creamos el schema de una nuvea forma
+            sql = crear_schema_tabla_v2(nombre_archivo)
 
             #obtenemos el cursor
-            cursor = db.cursor()
+            cursor = db_.cursor()
 
             # creamos la tabla
             cursor.execute(sql)
-            db.commit()
+            cursor.close();
+
+            # Normalizamos la tabla
+            #nomrmaliza_schema(nombre_archivo)
 
             # Cargamos el archivo
             sql =  "LOAD DATA LOCAL INFILE '"+os.path.abspath("media/temp/"+nombre_archivo)+"' "
@@ -104,11 +136,9 @@ def nuevo_reporte_view(request):
             sql += "IGNORE 1 LINES "
 
             # ejecutamos la carga del archivo
+            cursor = db_.cursor()
             cursor.execute(sql)
-            db.commit()
-
-            #cerramos la conexion con el servidor
-            db.close()
+            cursor.close()
 
             #eliminamos el archivo temporal
             os.remove(os.path.abspath("media/temp/"+nombre_archivo))
@@ -130,27 +160,69 @@ def nuevo_reporte_view(request):
 
     return render(request, 'nuevo_reporte.html', context)
 
-def reporte_view(request, reporte_id, limit, offset):
-    # conectamos con la base de datos con permisos de cargar archivos
-    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
-    sql = "SELECT nombre_tabla  FROM reportes_reporte WHERE id = "+reporte_id
 
-    #obtenemos el cursor
-    cursor = db.cursor()
+def obtener_cabeceras_reporte(request, reporte_id, nombre_tabla):
+    sql = "SELECT * FROM "+nombre_tabla+" LIMIT 1;"
 
+    cursor = db_.cursor()
     cursor.execute(sql)
     data=cursor.fetchone()
 
-    sql = "SELECT * FROM "+data[0]+" LIMIT "+limit+" OFFSET "+offset
-    cursor.execute(sql)
-    data=cursor.fetchall()
     headers = [i[0] for i in cursor.description]
-
     cursor.close()
 
     context = {
-        'data': data,
         'headers': headers
     }
+
     return JsonResponse(context)
-    #return render(request, 'reporte.html', context)
+
+
+def reporte_view(request, reporte_id, nombre_tabla):
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+
+    offset = request.GET['start']
+    limit = request.GET['length']
+    draw = request.GET['draw']
+    orderby = request.GET['order[0][column]']
+    order = request.GET['order[0][dir]']
+
+
+    #obtenemos el total de registros
+    sql = "SELECT COUNT(*) AS total FROM "+nombre_tabla
+
+    cursor = db.cursor()
+    cursor.execute(sql)
+    total=cursor.fetchone()
+    try:
+        cursor.close()
+    except Err:
+        pass
+
+    # obetenemos los registros paginados
+    sql = "SELECT * FROM "+nombre_tabla
+
+    #if orderby != "" and order != "":
+    #    sql += " ORDER BY nombre_campo('"+nombre_tabla+"',"+orderby+") "+order
+
+    sql += " LIMIT "+offset+", "+limit
+
+
+    cursor = db.cursor()
+    cursor.execute(sql)
+    data=cursor.fetchall()
+    try:
+        cursor.close()
+    except Err:
+        pass
+
+    db.close()
+
+    context = {
+        'draw': draw,
+        'data': data,
+        'recordsTotal': total[0],
+        'recordsFiltered': total[0]
+    }
+
+    return JsonResponse(context)

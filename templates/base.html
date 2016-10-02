@@ -6,6 +6,8 @@
     <title>{% block title %}{% endblock title %}</title>
     <link rel="stylesheet" href="{% static 'libs/bootstrap/dist/css/bootstrap.min.css' %}" media="screen">
     <link rel="stylesheet" href="{% static 'libs/font-awesome/css/font-awesome.min.css'%}" media="screen">
+    <link rel="stylesheet" href="{% static 'libs/datatables.net-bs/css/dataTables.bootstrap.min.css'%}" media="screen">
+    <link rel="stylesheet" href="{% static 'libs/datatables.net-scroller-bs/css/scroller.bootstrap.min.css'%}" media="screen">
     <link rel="stylesheet" href="{% static 'css/style.css'%}" media="screen">
 </head>
 <body>
@@ -45,7 +47,9 @@
 
   <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
   <script src="{% static 'libs/bootstrap/dist/js/bootstrap.min.js' %}"></script>
-  <script src="{% static 'js/tablefixedheader.js' %}"></script>
+  <script src="{% static 'libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+  <script src="{% static 'libs/datatables.net-bs/js/dataTables.bootstrap.min.js' %}"></script>
+  <script src="{% static 'libs/datatables.net-scroller/js/dataTables.scroller.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/home.js'%}"></script>
 </body>
 </html>

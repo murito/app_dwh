@@ -1,44 +1,49 @@
-function obtenerReporte(id){
-  $(".header-copy").remove();
+var table = null;
+var url = "http://localhost:8000/";
 
-  $.ajax({
-    type: "GET",
-    url: "http://localhost:8000/reportes/reporte/"+id+"/"+10+"/1",
-    success: function(data){
-      // Genera las filas de la tabla
-      var rows = $.map(data['data'], function(actual,indice,array){
-            var tr = "<tr>";
-            var indice, valor;
-            for(indice in actual){
-              tr += "<td>"+actual[indice]+"</td>";
-            }
-            tr += "</tr>";
-            return tr;
-      });
-
-      // Genera las cabeceras de la tala
-      var th = "";
-      for(var indice in data.headers){
-        th += "<th>"+data.headers[indice]+"</th>";
-      }
-
-      $("table thead tr").html(th);
-      $("table tbody").html(rows);
-
-      // Flota la cabecera de la tabla
-      $('.table-fixed-header').fixedHeader();
-
-      /* sincroniza cabeceras*/
-      $(".header tr th").each(function(i,o){
-        $($(".header-copy tr th")[i]).width($(o).width());
-      });
-
-      // Mueve la cabecera junto con la tabla al hacer scroll lateral 
-      $(document).scroll(function(){
-        $(".header-copy").css({
-          "transform": "translate(-"+($(this).scrollLeft())+"px, 0)"
-        });
-      });
+function obtenerReporte(id, nombre_tabla){
+    // verificamos que la tabla no exista y la destruimos en caso contrario
+    // para evitar errores al instanciar de nuevo el mosmo objeto
+    if ( table != null ){
+      try{
+        table.destroy();
+      }catch(err){}
     }
-  });
+
+    var url_reporte = url+"reportes/reporte/"+id+"/"+nombre_tabla;
+    var url_cabceras = url+"reportes/cabeceras_reporte/"+id+"/"+nombre_tabla;
+
+    $.ajax({
+      type: "GET",
+      url: url_cabceras,
+      success: function(data){
+        // Genera las cabeceras de la tala
+        var th = "<tr>";
+        for(var indice in data.headers){
+          th += "<th>"+data.headers[indice]+"</th>";
+        }
+        th += "</tr>";
+        $("table thead").html(th);
+
+
+        // Instanciamos el objeto de tabla
+        table = $("table").DataTable({
+          serverSide: true,
+          bSortClasses: false,
+          bProcessing: true,
+          ajax: {
+            url: url_reporte,
+            type: "GET",
+          },
+          deferRender: true,
+          scrollY: 500,
+          scrollX: true,
+          scroller: {
+            loadingIndicator: false
+          }
+        });
+
+      }
+    });
+
 }
