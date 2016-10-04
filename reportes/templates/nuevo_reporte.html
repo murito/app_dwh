@@ -9,10 +9,10 @@
                 <h2>Nuevo Reporte {{ id }}  </h2>
             </div>
 
-            <form method="post" action="" enctype="multipart/form-data">
+            <form id="nuevo_reporte" method="post" action="" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ form.as_p }}
-                <button type="submit" class="btn btn-primary">Guardar</button>
+                <button id="guardar" type="submit" class="btn btn-primary">Guardar</button>
             </form>
         </div>
     </div>

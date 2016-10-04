@@ -10,3 +10,46 @@
 .clear{
   clear: both;
 }
+
+
+.chips{
+  display: none;
+}
+.chip {
+    display: inline-block;
+    padding: 0 25px;
+    margin: 5px;
+    height: 50px;
+    font-size: 16px;
+    line-height: 50px;
+    border-radius: 25px;
+    background-color: #f1f1f1;
+}
+
+.chip:hover,
+#columns:hover{
+  cursor: pointer;
+}
+
+.chip i{
+  margin: 10px;
+}
+
+#columns{
+  display: none;
+}
+
+.delete_report:hover{
+  cursor: pointer;
+}
+.delete_report{
+    float: right;
+    right: -20px;
+    top: -30px;
+    position: relative;
+    z-index: 1;
+}
+
+.dataTables_processing{
+  z-index: 105;
+}

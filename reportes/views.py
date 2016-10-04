@@ -66,6 +66,11 @@ def crear_schema_tabla_v2(nombre):
 
     # Preparamos la consulta quitandole al nombre del archivo la extension
     sql = "DROP TABLE IF EXISTS "+nombre[:-4]+"; "
+    cursor = db_.cursor()
+    cursor.execute(sql)
+    cursor.close()
+    db_.commit()
+
     sql = "CREATE TABLE IF NOT EXISTS "+nombre[:-4]+"("
 
     # solo recorremos el row 1
@@ -108,7 +113,6 @@ def nuevo_reporte_view(request):
             nombre_archivo = reporte_model.nombre_tabla+'.'+request.FILES['archivo'].name[-3:]
             almacena_archivo_desde_formulario(request.FILES['archivo'], nombre_archivo)
 
-
             #creamos el schema de una nuvea forma
             sql = crear_schema_tabla_v2(nombre_archivo)
 
@@ -117,10 +121,9 @@ def nuevo_reporte_view(request):
 
             # creamos la tabla
             cursor.execute(sql)
-            cursor.close();
+            db_.commit()
+            cursor.close()
 
-            # Normalizamos la tabla
-            #nomrmaliza_schema(nombre_archivo)
 
             # Cargamos el archivo
             sql =  "LOAD DATA LOCAL INFILE '"+os.path.abspath("media/temp/"+nombre_archivo)+"' "
@@ -138,10 +141,9 @@ def nuevo_reporte_view(request):
             # ejecutamos la carga del archivo
             cursor = db_.cursor()
             cursor.execute(sql)
+            db_.commit()
             cursor.close()
 
-            #eliminamos el archivo temporal
-            os.remove(os.path.abspath("media/temp/"+nombre_archivo))
 
             # Si vamos bien con la importacion gurdamos el registro del reportte
             reporte_model.save()
@@ -149,6 +151,10 @@ def nuevo_reporte_view(request):
             # Agregamos la relacion del reporte con el usuario  y guradamos
             reporte_model.user_id.add(request.user)
             reporte_model.save()
+
+
+            #eliminamos el archivo temporal
+            os.remove(os.path.abspath("media/temp/"+nombre_archivo))
 
             # redirigimos a home
             messages.success(request, 'El reporte se almaceno con exito.')
@@ -202,11 +208,16 @@ def reporte_view(request, reporte_id, nombre_tabla):
     # obetenemos los registros paginados
     sql = "SELECT * FROM "+nombre_tabla
 
-    #if orderby != "" and order != "":
-    #    sql += " ORDER BY nombre_campo('"+nombre_tabla+"',"+orderby+") "+order
+    if orderby != "" and order != "":
+        sql_ = "SELECT  nombre_campo('"+nombre_tabla+"',"+str(orderby)+") "
+        cursor = db.cursor()
+        cursor.execute(sql_)
+        orderby_=cursor.fetchone()
+        cursor.close()
+
+        sql += " ORDER BY `"+orderby_[0]+"` "+order
 
     sql += " LIMIT "+offset+", "+limit
-
 
     cursor = db.cursor()
     cursor.execute(sql)
@@ -223,6 +234,50 @@ def reporte_view(request, reporte_id, nombre_tabla):
         'data': data,
         'recordsTotal': total[0],
         'recordsFiltered': total[0]
+    }
+
+    return JsonResponse(context)
+
+def eliminar_columna_reporte(request, columna, reporte):
+    cursor = db_.cursor();
+    sql = "SELECT nombre_campo('"+reporte+"', "+columna+") "
+    cursor.execute(sql)
+    data = cursor.fetchone()
+    cursor.close()
+
+    sql = "ALTER TABLE "+reporte+" DROP COLUMN `"+data[0]+"` "
+
+    cursor = db_.cursor()
+    cursor.execute(sql)
+    db_.commit()
+    cursor.close()
+
+    context ={
+        'columna': columna,
+        'reporte': reporte
+    }
+
+    context = {
+        'success': "true"
+    }
+
+    return JsonResponse(context)
+
+def eliminar_reporte(request, id, nombre_tabla):
+    cursor = db_.cursor();
+    sql = "DROP TABLE IF EXISTS "+nombre_tabla
+    cursor.execute(sql)
+    cursor.close()
+    db_.commit()
+
+    sql = "DELETE FROM reportes_reporte WHERE id = "+id
+    cursor = db_.cursor();
+    cursor.execute(sql)
+    cursor.close()
+    db_.commit()
+
+    context = {
+        'success': "true"
     }
 
     return JsonResponse(context)

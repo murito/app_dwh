@@ -9,18 +9,32 @@
 
     <div class="list-group">
       {% for reporte in reportes%}
-      <a href="#" onclick="obtenerReporte({{reporte.id}},'{{ reporte.nombre_tabla}}')" class="list-group-item">
+      <a href="#" id="{{ reporte.nombre_tabla }}" onclick="obtenerReporte({{reporte.id}},'{{ reporte.nombre_tabla}}')" class="list-group-item">
           <div class="float50">{{ reporte.nombre }}</div>
           <div class="float50 text-right">
             <i class="fa fa-cubes text-right" aria-hidden="true"></i>
           </div>
           <div class="clear"></div>
       </a>
+      <i class="fa fa-times delete_report" aria-hidden="true" onclick="eliminar_reporte({{ reporte.id }}, '{{ reporte.nombre }}', '{{ reporte.nombre_tabla }}'); return false;"></i>
       {%endfor%}
     </div>
   </div>
 
   <div class="col-xs-9">
+    <nav class="navbar navbar-default" onclick="showHideColumns()" id="columns">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a href="#" class="navbar-brand">Columnas</a>
+        </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-5">
+          <p class="navbar-text navbar-right">
+            <i class="fa fa-angle-right" aria-hidden="true"></i>
+          </p>
+        </div>
+      </div>
+    </nav>
+    <div class="chips"></div>
 
     <table class="table table-stripep table-fixed-header">
       <thead class="header">
