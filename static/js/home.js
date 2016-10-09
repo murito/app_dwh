@@ -4,13 +4,10 @@ var visible = false;
 
 
 $("#nuevo_reporte").submit(function(){
-    $("#guardar").addClass("disabled");
+    $("#guardar").attr("disabled","disabled");
 });
 
 function obtenerReporte(id, nombre_tabla){
-    $("#columns").show();
-    showHideColumns(0);
-
     // verificamos que la tabla no exista y la destruimos en caso contrario
     // para evitar errores al instanciar de nuevo el mosmo objeto
     if ( table != null ){
@@ -39,17 +36,29 @@ function obtenerReporte(id, nombre_tabla){
         $("table thead").html(th);
 
 
+        // Si solo queda una columna no permitas eliminarla para evitar problemas
+        // con la tabla en mysql
+        if ( $(".chips .chip").length > 1 ){
+          $("#columns").show();
+          showHideColumns(0);
+        }else {
+          $("#columns").hide();
+          showHideColumns(0);
+        }
+
+
         // Instanciamos el objeto de tabla
         table = $("table").DataTable({
           serverSide: true,
           bSortClasses: false,
           bProcessing: true,
           searching: false,
+          aaSorting: [],
           ajax: {
             url: url_reporte,
             type: "GET",
-            data: {
-              lebgth: 10
+            data: function(d){
+              d.length = 200;
             }
           },
           deferRender: true,
@@ -88,12 +97,12 @@ function eliminarColumna(columna, reporte, objeto){
   var url_drop = url+"reportes/reporte/dropcolumn/"+columna+"/"+reporte;
 
   if ( confirm("Seguro que desea eliminar la columna "+ columna) ){
-    objeto.remove();
     $.ajax({
       url: encodeURI(url_drop),
       type: "GET",
       success: function(data){
         if ( data.success == "true" ){
+          objeto.parent().remove();
           $("#"+reporte).click();
         }
       }

@@ -28,10 +28,6 @@ separadores = [",","\\t"]
 findelineas = ["\\n","\\r", "\\r\\n"]
 
 
-# conectamos con la base de datos con permisos de cargar archivos
-db_ = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh', local_infile=1)
-
-
 # Almacemanos el archivo en lugar de tratarlo desde la memoria para evitar
 # problemas con archivos muy grandes
 def almacena_archivo_desde_formulario(archivo, nombre):
@@ -43,6 +39,9 @@ def almacena_archivo_desde_formulario(archivo, nombre):
 
 
 def crear_schema_tabla_v2(nombre):
+    # conectamos con la base de datos con permisos de cargar archivos
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+
     fh = open('media/temp/'+nombre, 'rb')
 
     # Cargamos el archivo y creamos el objeto
@@ -66,10 +65,13 @@ def crear_schema_tabla_v2(nombre):
 
     # Preparamos la consulta quitandole al nombre del archivo la extension
     sql = "DROP TABLE IF EXISTS "+nombre[:-4]+"; "
-    cursor = db_.cursor()
+    cursor = db.cursor()
     cursor.execute(sql)
     cursor.close()
-    db_.commit()
+    db.commit()
+
+
+    db.close()
 
     sql = "CREATE TABLE IF NOT EXISTS "+nombre[:-4]+"("
 
@@ -77,13 +79,13 @@ def crear_schema_tabla_v2(nombre):
     for row in row_set:
         for field in row:
             if str(field.type) == "Integer":
-                sql += "`"+field.column+"` INT(11), "
+                sql += "`"+field.column.replace(" ","_")+"` INT(11), "
             elif str(field.type) == "Decimal":
-                sql += "`"+field.column+"` DECIMAL(64,10), "
+                sql += "`"+field.column.replace(" ","_")+"` DECIMAL(64,10), "
             elif str(field.type) == "Bool":
-                sql += "`"+field.column+"` INT(1), "
+                sql += "`"+field.column.replace(" ","_")+"` INT(1), "
             else:
-                sql += "`"+field.column+"` VARCHAR("+str(len(field.value))+"), "
+                sql += "`"+field.column.replace(" ","_")+"` VARCHAR("+str(len(field.value))+"), "
         break
 
     sql = sql[:-2]+")"
@@ -96,6 +98,9 @@ def nuevo_reporte_view(request):
         form = RegistroReporteForm(request.POST, request.FILES)
 
         if form.is_valid():
+            # conectamos con la base de datos con permisos de cargar archivos
+            db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh', local_infile=1)
+
             cleaned_data = form.cleaned_data
             nombre = cleaned_data.get('nombre')
             separador = int(cleaned_data.get('separador'))
@@ -117,11 +122,11 @@ def nuevo_reporte_view(request):
             sql = crear_schema_tabla_v2(nombre_archivo)
 
             #obtenemos el cursor
-            cursor = db_.cursor()
+            cursor = db.cursor()
 
             # creamos la tabla
             cursor.execute(sql)
-            db_.commit()
+            db.commit()
             cursor.close()
 
 
@@ -139,11 +144,13 @@ def nuevo_reporte_view(request):
             sql += "IGNORE 1 LINES "
 
             # ejecutamos la carga del archivo
-            cursor = db_.cursor()
+            cursor = db.cursor()
             cursor.execute(sql)
-            db_.commit()
+            db.commit()
             cursor.close()
 
+
+            db.close()
 
             # Si vamos bien con la importacion gurdamos el registro del reportte
             reporte_model.save()
@@ -168,14 +175,19 @@ def nuevo_reporte_view(request):
 
 
 def obtener_cabeceras_reporte(request, reporte_id, nombre_tabla):
+    # conectamos con la base de datos con permisos de cargar archivos
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+
     sql = "SELECT * FROM "+nombre_tabla+" LIMIT 1;"
 
-    cursor = db_.cursor()
+    cursor = db.cursor()
     cursor.execute(sql)
     data=cursor.fetchone()
 
     headers = [i[0] for i in cursor.description]
     cursor.close()
+
+    db.close()
 
     context = {
         'headers': headers
@@ -185,17 +197,20 @@ def obtener_cabeceras_reporte(request, reporte_id, nombre_tabla):
 
 
 def reporte_view(request, reporte_id, nombre_tabla):
-    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh', cursorclass = MySQLdb.cursors.SSCursor)
 
     offset = request.GET['start']
     limit = request.GET['length']
     draw = request.GET['draw']
-    orderby = request.GET['order[0][column]']
-    order = request.GET['order[0][dir]']
+    orderby = request.GET.get('order[0][column]', '')
+    order = request.GET.get('order[0][dir]', '')
 
 
     #obtenemos el total de registros
-    sql = "SELECT COUNT(*) AS total FROM "+nombre_tabla
+    #sql = "SELECT COUNT(*) AS total FROM "+nombre_tabla <= esto tarda mucho con tablas grandes
+    sql = "SELECT table_rows AS total "
+    sql += "FROM information_schema.tables "
+    sql += "WHERE table_name = '"+nombre_tabla+"'"
 
     cursor = db.cursor()
     cursor.execute(sql)
@@ -239,23 +254,22 @@ def reporte_view(request, reporte_id, nombre_tabla):
     return JsonResponse(context)
 
 def eliminar_columna_reporte(request, columna, reporte):
-    cursor = db_.cursor();
-    sql = "SELECT nombre_campo('"+reporte+"', "+columna+") "
+    # conectamos con la base de datos con permisos de cargar archivos
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+
+    sql = "SELECT nombre_campo('"+reporte+"', "+columna+"); "
+    cursor = db.cursor();
     cursor.execute(sql)
     data = cursor.fetchone()
     cursor.close()
 
-    sql = "ALTER TABLE "+reporte+" DROP COLUMN `"+data[0]+"` "
-
-    cursor = db_.cursor()
+    sql = "ALTER TABLE `dwh`.`"+reporte+"` DROP `"+data[0]+"` "
+    cursor = db.cursor()
     cursor.execute(sql)
-    db_.commit()
+    db.commit()
     cursor.close()
 
-    context ={
-        'columna': columna,
-        'reporte': reporte
-    }
+    db.close()
 
     context = {
         'success': "true"
@@ -264,17 +278,22 @@ def eliminar_columna_reporte(request, columna, reporte):
     return JsonResponse(context)
 
 def eliminar_reporte(request, id, nombre_tabla):
-    cursor = db_.cursor();
+    # conectamos con la base de datos con permisos de cargar archivos
+    db = MySQLdb.connect(host='localhost', user='root', passwd='', db='dwh')
+
     sql = "DROP TABLE IF EXISTS "+nombre_tabla
+    cursor = db.cursor();
     cursor.execute(sql)
     cursor.close()
-    db_.commit()
+    db.commit()
 
     sql = "DELETE FROM reportes_reporte WHERE id = "+id
-    cursor = db_.cursor();
+    cursor = db.cursor();
     cursor.execute(sql)
     cursor.close()
-    db_.commit()
+    db.commit()
+
+    db.close()
 
     context = {
         'success': "true"
